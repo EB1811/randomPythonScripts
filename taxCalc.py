@@ -43,5 +43,6 @@ postTaxIncome = income - taxPayed - nInsurancePayed - sLoanPayed
 print("\nTax Payed:", taxPayed)
 print("National Insurance Payed:", nInsurancePayed)
 print("Student Loans Payed:", sLoanPayed)
+print("Total Payed:", taxPayed + nInsurancePayed+ sLoanPayed)
 print("----------------")
 print("Post Tax Income:", postTaxIncome)
