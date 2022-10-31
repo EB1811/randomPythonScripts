@@ -3,9 +3,9 @@ from os.path import isfile, join
 import os
 import random
 
-myPath = 'D:/Users/Emmanuils/Documents/GamesStuff/Victoria.II.v3.04.Inclu.ALL.DLC/Victoria.II.v3.04.Inclu.ALL.DLC/mod/EMAN_MoreCivilised/history/provinces/indonesia'
+myPath = 'D:/Users/Emmanuils/Documents/GamesStuff/Victoria.II.v3.04.Inclu.ALL.DLC/Victoria.II.v3.04.Inclu.ALL.DLC/mod/EMAN_MoreCivilised/history/provinces/india'
 corePath = 'D:/Users/Emmanuils/Documents/GamesStuff/Victoria.II.v3.04.Inclu.ALL.DLC/Victoria.II.v3.04.Inclu.ALL.DLC/mod/EMAN_MoreCivilised'
-countryListPath = '/Users/Emmanuils/Documents/Victoria.II.v3.04.Inclu.ALL.DLC\Victoria.II.v3.04.Inclu.ALL.DLC/mod/GFM/history/countries'
+countryListPath = '/Users/Emmanuils/Documents/Victoria.II.v3.04.Inclu.ALL.DLC\Victoria.II.v3.04.Inclu.ALL.DLC/mod/TGC/history/countries'
 
 # Get countries
 #for subdir, dirs, files in os.walk(countryListPath):
@@ -17,13 +17,11 @@ countryListPath = '/Users/Emmanuils/Documents/Victoria.II.v3.04.Inclu.ALL.DLC\Vi
 
 
 # Create province files
-def changeProvinces(country):
-    for subdir, dirs, files in os.walk(myPath):
+def changeProvinces(country, path = corePath + '/history/provinces/india', newPath = 'D:/Users/Emmanuils/PythonFiles/'):
+    for subdir, dirs, files in os.walk(path):
         for file in files:
             filepath = subdir + os.sep + file
             dirname = subdir.split(os.path.sep)[-1]
-            newPath = 'D:/Users/Emmanuils/PythonFiles/'
-            print('New Path', newPath)
             
             if not os.path.exists(newPath):
                 os.makedirs(newPath)
@@ -47,13 +45,11 @@ def changeProvinces(country):
 
                 print(filepath)
                 
-def changeSpecificProvinces(initCountry, newCountry):
-    for subdir, dirs, files in os.walk(myPath):
+def changeSpecificProvinces(initCountry, newCountry, path = corePath + '/history/provinces/asia', newPath = 'D:/Users/Emmanuils/PythonFiles/'):
+    for subdir, dirs, files in os.walk(path):
         for file in files:
             filepath = subdir + os.sep + file
             dirname = subdir.split(os.path.sep)[-1]
-            newPath = 'D:/Users/Emmanuils/PythonFiles/'
-            print('New Path', newPath)
             
             if not os.path.exists(newPath):
                 os.makedirs(newPath)
@@ -114,6 +110,16 @@ def changeSpecificPops(path, newPath, countries, multiplier):
 
                         print(countryName)
 
+def getRandomPopCountryNamesList(countriesPath, amount):
+    countryNames = []
+    for subdir, dirs, files in os.walk(countriesPath):
+        randomFiles = random.sample(files, amount)
+        for file in randomFiles:
+            countryNames.append(file.split('.', 1)[0])
+    print(countryNames)
+    return countryNames
+
+                        
 def getGivenCountries(path, newPath, countries):
     for subdir, dirs, files in os.walk(path):
         for file in files:
@@ -136,8 +142,17 @@ def getGivenCountries(path, newPath, countries):
                         print(tag)
                         print(countryInfo)
 
+### CORE ###
 # changeProvinces("INO")
-changeSpecificProvinces("PHI", "PHL")
+# changeSpecificProvinces("EIC", "BUR")
 # changeSpecificPops(corePath + '/history/pops/1836.1.1', 'D:/Users/Emmanuils/PythonFiles/', ['Vietnam', 'Burma', 'Philippines', 'Malaysia', 'Indonesia', 'Cambodia'], 1.35)
+# changeSpecificPops(corePath + '/history/pops/1836.1.1', 'D:/Users/Emmanuils/PythonFiles/', ['China', 'India'], 0.75)
 # getGivenCountries(corePath + '/history/countries', 'D:/Users/Emmanuils/PythonFiles/', ['BUR', 'IND', 'INO', 'DAI', 'ANN', 'SIA', 'PAT'])
+
+### EXTRA ###
+#changeSpecificPops(corePath + '/history/pops/1836.1.1', 'D:/Users/Emmanuils/PythonFiles/', getRandomPopCountryNamesList(corePath + '/history/pops/1836.1.1', 10), 0.5)
+changeSpecificPops(corePath + '/history/pops/1836.1.1', 'D:/Users/Emmanuils/PythonFiles/', getRandomPopCountryNamesList(corePath + '/history/pops/1836.1.1', 10), 2)
+
 print("DONE")
+
+#getRandomPopCountryNamesList(corePath + '/history/pops/1836.1.1', 5)
