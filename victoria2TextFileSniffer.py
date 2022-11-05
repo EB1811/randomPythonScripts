@@ -150,8 +150,8 @@ def getGivenCountries(path, newPath, countries):
 # getGivenCountries(corePath + '/history/countries', 'D:/Users/Emmanuils/PythonFiles/', ['BUR', 'IND', 'INO', 'DAI', 'ANN', 'SIA', 'PAT'])
 
 ### EXTRA ###
-#changeSpecificPops(corePath + '/history/pops/1836.1.1', 'D:/Users/Emmanuils/PythonFiles/', getRandomPopCountryNamesList(corePath + '/history/pops/1836.1.1', 10), 0.5)
-changeSpecificPops(corePath + '/history/pops/1836.1.1', 'D:/Users/Emmanuils/PythonFiles/', getRandomPopCountryNamesList(corePath + '/history/pops/1836.1.1', 10), 2)
+#changeSpecificPops(corePath + '/history/pops/1836.1.1', 'D:/Users/Emmanuils/PythonFiles/', getRandomPopCountryNamesList(corePath + '/history/pops/1836.1.1', 25), 0.8)
+changeSpecificPops(corePath + '/history/pops/1836.1.1', 'D:/Users/Emmanuils/PythonFiles/', getRandomPopCountryNamesList(corePath + '/history/pops/1836.1.1', 25), 1.5)
 
 print("DONE")
 
