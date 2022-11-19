@@ -5,6 +5,7 @@ import random
 
 myPath = 'D:/Users/Emmanuils/Documents/GamesStuff/Victoria.II.v3.04.Inclu.ALL.DLC/Victoria.II.v3.04.Inclu.ALL.DLC/mod/EMAN_MoreCivilised/history/provinces/india'
 corePath = 'D:/Users/Emmanuils/Documents/GamesStuff/Victoria.II.v3.04.Inclu.ALL.DLC/Victoria.II.v3.04.Inclu.ALL.DLC/mod/EMAN_MoreCivilised'
+modPath = 'D:/Users/Emmanuils/Documents/GamesStuff/Victoria.II.v3.04.Inclu.ALL.DLC/Victoria.II.v3.04.Inclu.ALL.DLC/mod/TGC'
 countryListPath = '/Users/Emmanuils/Documents/Victoria.II.v3.04.Inclu.ALL.DLC\Victoria.II.v3.04.Inclu.ALL.DLC/mod/TGC/history/countries'
 
 # Get countries
@@ -87,7 +88,7 @@ def changeSpecificProvinces(initCountry, newCountry, path = corePath + '/history
                 else:
                     readFrom.close()
                 
-def changeSpecificPops(path, newPath, countries, multiplier):
+def changeSpecificPops(countries, multiplier, path = corePath + '/history/pops/1836.1.1', newPath = 'D:/Users/Emmanuils/PythonFiles/'):
     for subdir, dirs, files in os.walk(path):
         for file in files:
             filepath = subdir + os.sep + file
@@ -110,7 +111,7 @@ def changeSpecificPops(path, newPath, countries, multiplier):
 
                         print(countryName)
 
-def getRandomPopCountryNamesList(countriesPath, amount):
+def getRandomPopCountryNamesList(amount, countriesPath = corePath + '/history/pops/1836.1.1'):
     countryNames = []
     for subdir, dirs, files in os.walk(countriesPath):
         randomFiles = random.sample(files, amount)
@@ -122,7 +123,7 @@ def getRandomPopCountryNamesList(countriesPath, amount):
     return countryNames
 
                         
-def getGivenCountries(path, newPath, countries):
+def getGivenCountries(countries, path = corePath + '/history/countries', newPath = 'D:/Users/Emmanuils/PythonFiles/'):
     for subdir, dirs, files in os.walk(path):
         for file in files:
             filepath = subdir + os.sep + file
@@ -149,11 +150,11 @@ def getGivenCountries(path, newPath, countries):
 # changeSpecificProvinces("EIC", "BUR")
 # changeSpecificPops(corePath + '/history/pops/1836.1.1', 'D:/Users/Emmanuils/PythonFiles/', ['Vietnam', 'Burma', 'Philippines', 'Malaysia', 'Indonesia', 'Cambodia'], 1.35)
 # changeSpecificPops(corePath + '/history/pops/1836.1.1', 'D:/Users/Emmanuils/PythonFiles/', ['China', 'India'], 0.75)
-# getGivenCountries(corePath + '/history/countries', 'D:/Users/Emmanuils/PythonFiles/', ['BUR', 'IND', 'INO', 'DAI', 'ANN', 'SIA', 'PAT'])
+# getGivenCountries(['BUR', 'IND', 'INO', 'DAI', 'ANN', 'SIA', 'PAT'])
 
 ### EXTRA ###
-changeSpecificPops(corePath + '/history/pops/1836.1.1', 'D:/Users/Emmanuils/PythonFiles/', getRandomPopCountryNamesList(corePath + '/history/pops/1836.1.1', 25), 0.75)
-#changeSpecificPops(corePath + '/history/pops/1836.1.1', 'D:/Users/Emmanuils/PythonFiles/', getRandomPopCountryNamesList(corePath + '/history/pops/1836.1.1', 20), 1.5)
+changeSpecificPops(getRandomPopCountryNamesList(15), 5)
+#changeSpecificPops(getRandomPopCountryNamesList(20), 1.5)
 
 print("DONE")
 
