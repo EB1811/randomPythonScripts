@@ -15,19 +15,20 @@ def extractCountriesInfo(countryTags, wantedInfo, divisionInfo = None, path = co
 
         dates = data['history']
         for date, dateGameData in dates.items():
-            formattedCountries = []
-            
-            requestedCountries = list(filter(lambda c: c['tag'] in countryTags, dateGameData['countries']))
-            
-            if len(requestedCountries) != len(countryTags):
-                for missingTag in filter(lambda t: t not in map(lambda c: c['tag'], dateGameData['countries']), countryTags):
-                    formattedCountries.append({"tag": missingTag, "data": 0})
-            
-            for country in requestedCountries:
-                wantedCalcData = country[wantedInfo] / country[divisionInfo] if divisionInfo else country[wantedInfo]
-                formattedCountries.append({"tag": country['tag'], "data": wantedCalcData})
-            
-            processedDates.append({"date": date, "countries": formattedCountries})
+            if date.endswith('.1.1'):
+                formattedCountries = []
+                
+                requestedCountries = list(filter(lambda c: c['tag'] in countryTags, dateGameData['countries']))
+                
+                if len(requestedCountries) != len(countryTags):
+                    for missingTag in filter(lambda t: t not in map(lambda c: c['tag'], dateGameData['countries']), countryTags):
+                        formattedCountries.append({"tag": missingTag, "data": 0})
+                
+                for country in requestedCountries:
+                    wantedCalcData = country[wantedInfo] / country[divisionInfo] if divisionInfo else country[wantedInfo]
+                    formattedCountries.append({"tag": country['tag'], "data": wantedCalcData})
+                
+                processedDates.append({"date": date, "countries": formattedCountries})
 
         #print(sorted(processedDates, key = lambda pd: pd['date']))
         return sorted(processedDates, key = lambda pd: pd['date'])
@@ -54,5 +55,6 @@ def createHistoryGraph(countryTags, wantedInfo, divisionInfo = None):
     pyplot.show()
 
 #processedDates = extractCountriesInfo(['FRA', 'USA', 'ENG', 'NEJ'], 'gdp')
-createHistoryGraph(['FRA', 'USA', 'TUR', 'ENG', 'HND', 'RUS', 'AUS', 'PRU', 'NGF', 'KUK', 'SWI'], 'gdp', 'population')
-createHistoryGraph(['INO', 'BEL', 'CHL', 'HAI', 'SPA', 'SWI'], 'gdp', 'population')
+createHistoryGraph(['FRA', 'USA', 'TUR', 'ENG', 'HND', 'RUS', 'AUS', 'PRU', 'NGF', 'KUK', 'SWI'], 'gdp')
+createHistoryGraph(['INO', 'BEL', 'CHL', 'HAI', 'SER', 'SWI'], 'gdp')
+#, 'population'
