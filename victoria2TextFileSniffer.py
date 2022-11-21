@@ -111,14 +111,14 @@ def changeSpecificPops(countries, multiplier, path = corePath + '/history/pops/1
 
                         print(countryName)
 
-def getRandomPopCountryNamesList(amount, countriesPath = corePath + '/history/pops/1836.1.1'):
+def getRandomPopCountryNamesList(amount, ignoredCountries, countriesPath = corePath + '/history/pops/1836.1.1'):
     countryNames = []
     for subdir, dirs, files in os.walk(countriesPath):
         randomFiles = random.sample(files, amount)
         for file in randomFiles:
-            # cyprus breaks everything -_-
-            if 'cyprus' not in file:
-                countryNames.append(file.split('.', 1)[0])
+            name = file.split('.', 1)[0]
+            if name not in ignoredCountries:
+                countryNames.append(name)
     print(countryNames)
     return countryNames
 
@@ -153,8 +153,8 @@ def getGivenCountries(countries, path = corePath + '/history/countries', newPath
 # getGivenCountries(['BUR', 'IND', 'INO', 'DAI', 'ANN', 'SIA', 'PAT'])
 
 ### EXTRA ###
-changeSpecificPops(getRandomPopCountryNamesList(15), 5)
-#changeSpecificPops(getRandomPopCountryNamesList(20), 1.5)
+#changeSpecificPops(getRandomPopCountryNamesList(20, ['Cyprus', 'Tunisia', 'China', 'India']), 2)
+changeSpecificPops(getRandomPopCountryNamesList(25, ['Cyprus', 'Tunisia', 'China', 'India']), 0.5)
 
 print("DONE")
 
