@@ -3,35 +3,39 @@ from os.path import isfile, join
 import os
 import random
 
-myPath = 'D:/Users/Emmanuils/Documents/GamesStuff/Victoria.II.v3.04.Inclu.ALL.DLC/Victoria.II.v3.04.Inclu.ALL.DLC/mod/EMAN_MoreCivilised/history/provinces/india'
-corePath = 'D:/Users/Emmanuils/Documents/GamesStuff/Victoria.II.v3.04.Inclu.ALL.DLC/Victoria.II.v3.04.Inclu.ALL.DLC/mod/EMAN_MoreCivilised'
-modPath = 'D:/Users/Emmanuils/Documents/GamesStuff/Victoria.II.v3.04.Inclu.ALL.DLC/Victoria.II.v3.04.Inclu.ALL.DLC/mod/TGC'
-countryListPath = '/Users/Emmanuils/Documents/Victoria.II.v3.04.Inclu.ALL.DLC\Victoria.II.v3.04.Inclu.ALL.DLC/mod/TGC/history/countries'
+myPath = "D:/Users/Emmanuils/Documents/GamesStuff/Victoria.II.v3.04.Inclu.ALL.DLC/Victoria.II.v3.04.Inclu.ALL.DLC/mod/EMAN_MoreCivilised/history/provinces/india"
+corePath = "D:/Users/Emmanuils/Documents/GamesStuff/Victoria.II.v3.04.Inclu.ALL.DLC/Victoria.II.v3.04.Inclu.ALL.DLC/mod/EMAN_MoreCivilised"
+modPath = "D:/Users/Emmanuils/Documents/GamesStuff/Victoria.II.v3.04.Inclu.ALL.DLC/Victoria.II.v3.04.Inclu.ALL.DLC/mod/TGC"
+countryListPath = "/Users/Emmanuils/Documents/Victoria.II.v3.04.Inclu.ALL.DLC\Victoria.II.v3.04.Inclu.ALL.DLC/mod/TGC/history/countries"
 
 # Get countries
-#for subdir, dirs, files in os.walk(countryListPath):
- #   for file in files:
-  #      filepath = subdir + os.sep + file
-   #     dirname = subdir.split(os.path.sep)[-1]
+# for subdir, dirs, files in os.walk(countryListPath):
+#   for file in files:
+#      filepath = subdir + os.sep + file
+#     dirname = subdir.split(os.path.sep)[-1]
 #
- #       countryList.append(file[0] + file[1] + file[2])
+#       countryList.append(file[0] + file[1] + file[2])
 
 
 # Create province files
-def changeProvinces(country, path = corePath + '/history/provinces/india', newPath = 'D:/Users/Emmanuils/PythonFiles/'):
+def changeProvinces(
+    country,
+    path=corePath + "/history/provinces/india",
+    newPath="D:/Users/Emmanuils/PythonFiles/",
+):
     for subdir, dirs, files in os.walk(path):
         for file in files:
             filepath = subdir + os.sep + file
             dirname = subdir.split(os.path.sep)[-1]
-            
+
             if not os.path.exists(newPath):
                 os.makedirs(newPath)
                 print("CREATING FILEPATH")
 
             if filepath.endswith(".txt"):
                 readFrom = open(filepath, "r")
-                writeToF = open(newPath+'/'+file, "w+")
-                
+                writeToF = open(newPath + "/" + file, "w+")
+
                 writeToF.write("owner = " + country + "\n")
                 writeToF.write("controller = " + country + "\n")
                 writeToF.write("add_core = " + country + "\n")
@@ -45,13 +49,19 @@ def changeProvinces(country, path = corePath + '/history/provinces/india', newPa
                 readFrom.close()
 
                 print(filepath)
-                
-def changeSpecificProvinces(initCountry, newCountry, path = corePath + '/history/provinces/asia', newPath = 'D:/Users/Emmanuils/PythonFiles/'):
+
+
+def changeSpecificProvinces(
+    initCountry,
+    newCountry,
+    path=corePath + "/history/provinces/asia",
+    newPath="D:/Users/Emmanuils/PythonFiles/",
+):
     for subdir, dirs, files in os.walk(path):
         for file in files:
             filepath = subdir + os.sep + file
             dirname = subdir.split(os.path.sep)[-1]
-            
+
             if not os.path.exists(newPath):
                 os.makedirs(newPath)
                 print("CREATING FILEPATH")
@@ -65,13 +75,13 @@ def changeSpecificProvinces(initCountry, newCountry, path = corePath + '/history
                     if "owner" in line:
                         if initCountry in line:
                             isInitCountry = True
-                            
+
                 readFrom.close()
-                        
+
                 if isInitCountry == True:
-                    writeToF = open(newPath+'/'+file, "w+")
+                    writeToF = open(newPath + "/" + file, "w+")
                     readFromInner = open(filepath, "r")
-                
+
                     writeToF.write("owner = " + newCountry + "\n")
                     writeToF.write("controller = " + newCountry + "\n")
                     writeToF.write("add_core = " + newCountry + "\n")
@@ -83,12 +93,18 @@ def changeSpecificProvinces(initCountry, newCountry, path = corePath + '/history
 
                     writeToF.close()
                     readFromInner.close()
-                    
+
                     print(filepath)
                 else:
                     readFrom.close()
-                
-def changeSpecificPops(countries, multiplier, path = corePath + '/history/pops/1836.1.1', newPath = 'D:/Users/Emmanuils/PythonFiles/'):
+
+
+def changeSpecificPops(
+    countries,
+    multiplier,
+    path=corePath + "/history/pops/1836.1.1",
+    newPath="D:/Users/Emmanuils/PythonFiles/",
+):
     for subdir, dirs, files in os.walk(path):
         for file in files:
             filepath = subdir + os.sep + file
@@ -98,11 +114,11 @@ def changeSpecificPops(countries, multiplier, path = corePath + '/history/pops/1
                 for countryName in countries:
                     if countryName in filepath:
                         readFrom = open(filepath, "r")
-                        writeToF = open(newPath+'/'+file, "w+")
+                        writeToF = open(newPath + "/" + file, "w+")
 
                         for line in readFrom:
                             if "size" in line:
-                                size = round(int(line.split('=')[-1]) * multiplier)
+                                size = round(int(line.split("=")[-1]) * multiplier)
                                 writeToF.write("		size = " + str(size) + "\n")
                             else:
                                 writeToF.write(line)
@@ -111,19 +127,26 @@ def changeSpecificPops(countries, multiplier, path = corePath + '/history/pops/1
 
                         print(countryName)
 
-def getRandomPopCountryNamesList(amount, ignoredCountries, countriesPath = corePath + '/history/pops/1836.1.1'):
+
+def getRandomPopCountryNamesList(
+    amount, ignoredCountries, countriesPath=corePath + "/history/pops/1836.1.1"
+):
     countryNames = []
     for subdir, dirs, files in os.walk(countriesPath):
         randomFiles = random.sample(files, amount)
         for file in randomFiles:
-            name = file.split('.', 1)[0]
+            name = file.split(".", 1)[0]
             if name not in ignoredCountries:
                 countryNames.append(name)
     print(countryNames)
     return countryNames
 
-                        
-def getGivenCountries(countries, path = corePath + '/history/countries', newPath = 'D:/Users/Emmanuils/PythonFiles/'):
+
+def getGivenCountries(
+    countries,
+    path=corePath + "/history/countries",
+    newPath="D:/Users/Emmanuils/PythonFiles/",
+):
     for subdir, dirs, files in os.walk(path):
         for file in files:
             filepath = subdir + os.sep + file
@@ -133,7 +156,7 @@ def getGivenCountries(countries, path = corePath + '/history/countries', newPath
                 for tag in countries:
                     if tag in filepath:
                         readFrom = open(filepath, "r")
-                        writeToF = open(newPath+'/'+file, "w+")
+                        writeToF = open(newPath + "/" + file, "w+")
 
                         countryInfo = []
                         for line in readFrom:
@@ -145,6 +168,7 @@ def getGivenCountries(countries, path = corePath + '/history/countries', newPath
                         print(tag)
                         print(countryInfo)
 
+
 ### CORE ###
 # changeProvinces("INO")
 # changeSpecificProvinces("EIC", "BUR")
@@ -153,9 +177,11 @@ def getGivenCountries(countries, path = corePath + '/history/countries', newPath
 # getGivenCountries(['BUR', 'IND', 'INO', 'DAI', 'ANN', 'SIA', 'PAT'])
 
 ### EXTRA ###
-#changeSpecificPops(getRandomPopCountryNamesList(20, ['Cyprus', 'Tunisia', 'China', 'India']), 2)
-changeSpecificPops(getRandomPopCountryNamesList(25, ['Cyprus', 'Tunisia', 'China', 'India']), 0.5)
+# changeSpecificPops(getRandomPopCountryNamesList(20, ['Cyprus', 'Tunisia', 'China', 'India']), 2)
+changeSpecificPops(
+    getRandomPopCountryNamesList(25, ["Cyprus", "Tunisia", "China", "India"]), 0.5
+)
 
 print("DONE")
 
-#getRandomPopCountryNamesList(corePath + '/history/pops/1836.1.1', 5)
+# getRandomPopCountryNamesList(corePath + '/history/pops/1836.1.1', 5)
