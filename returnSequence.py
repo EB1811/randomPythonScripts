@@ -65,10 +65,6 @@ C_weight_funcs = [
 ]
 
 
-def lerp(x, y, w) -> float:
-    return x + w * (y - x)
-
-
 def plot(
     sequences: list[list[float] | list[int]],
     show_black=True,
@@ -91,6 +87,10 @@ def plot(
     if show_black:
         plt.axhline(0, color="black", linestyle="-", linewidth=1.5)
     plt.show()
+
+
+def lerp(x, y, w) -> float:
+    return x + w * (y - x)
 
 
 def get_sequence(
@@ -173,6 +173,70 @@ def get_remove_num_adjusted_func(
         return num - adjusted_remove if num > 0 else num
 
     return remove_num_adjusted_func
+
+
+def get_adjusted_removal_advnaced_func(
+    remove_amount: int,
+    adjust_multi: dict[int, dict[int, float]],
+    adjust_default: float,
+    saved_data: dict[str, float],
+):
+    def adjusted_removal_advnaced_func(
+        num: int, s_num: int, sequence: list[float]
+    ) -> float:
+        adjusted_remove = remove_amount
+        seq_pos = sequence.index(s_num)
+
+        adjust_multi_num = adjust_default
+
+        count_adjust_multi = adjust_multi.get(
+            max(
+                (key for key in adjust_multi.keys() if key >= 0 and key < seq_pos),
+                default=0,
+            ),
+            None,
+        )
+        if count_adjust_multi:
+            adjust_multi_num = count_adjust_multi.get(round(s_num), None)
+            if not adjust_multi_num:
+                if s_num >= 0:
+                    adjust_multi_num = count_adjust_multi.get(
+                        max(
+                            (
+                                key
+                                for key in count_adjust_multi.keys()
+                                if key >= 0 and key < s_num
+                            ),
+                            default=0,
+                        ),
+                        adjust_default,
+                    )
+                if s_num < 0:
+                    adjust_multi_num = count_adjust_multi.get(
+                        min(
+                            (
+                                key
+                                for key in count_adjust_multi.keys()
+                                if key < 0 and key > s_num
+                            ),
+                            default=0,
+                        ),
+                        adjust_default,
+                    )
+
+        if s_num < 0:
+            adjusted_remove *= 1 - (adjust_multi_num or adjust_default)
+        elif s_num >= 0 and (
+            seq_pos >= 2 and sequence[seq_pos - 1] > 0 and sequence[seq_pos - 2] > 0
+        ):
+            adjusted_remove *= 1 + (adjust_multi_num or adjust_default)
+
+        saved_data["total_removed"] = (
+            saved_data.get("total_removed", 0) + adjusted_remove
+        )
+        return num - adjusted_remove if num > 0 else num
+
+    return adjusted_removal_advnaced_func
 
 
 def get_percent_hit_zero_func():
@@ -296,17 +360,27 @@ def main():
     # return
     saved_data = {}
     seqs_data, count_stats, custom_stats = simulate_sequences(
-        200000,
+        100000,
         5.5,
         30,
         seq_count=10000,
         exclude_percent=2,
         num_modify_funcs=[
             # get_remove_num_func(10000),
-            get_remove_num_adjusted_func(10000, 0.5, saved_data)
+            # get_remove_num_adjusted_func(12500, 0.00, saved_data),
+            # get_adjusted_removal_advnaced_func(12000,
+            #                               {0: {-15: 1.0, -10: 1.0, -5: 1.0, -1: 1.0},
+            #                                3: {-15: 0.5, -10: 0.5, -5: 0.2, 5: 0.0, 10: 0.0, 15: 0.4},
+            #                                10: {-15: 0.3, -10: 0.2, 1: 0.0, 5: 0.0, 10: 0.4, 15: 0.6},
+            #                                20: {-15: 0.2, -10: 0.1, 1: 0.2, 5: 0.4, 10: 0.6, 15: 0.8}
+            #                               }, 0.0, saved_data)
         ],
-        stat_funcs=[get_sequence_averages_func(), get_percent_hit_zero_func()],
+        stat_funcs=[
+            get_sequence_averages_func(),
+            # get_percent_hit_zero_func()
+        ],
     )
+
     print("saved_data", saved_data)
     print("count_stats", count_stats[30])
     print("custom_stats", custom_stats)
