@@ -149,6 +149,13 @@ def multi_num_roll(
     return res
 
 
+def get_add_num_func(add_amount: int):
+    def add_num_func(num: int, s_num: int, sequence: list[int]) -> int:
+        return num + add_amount if num > 0 else num
+
+    return add_num_func
+
+
 def get_remove_num_func(remove_amount: int):
     def remove_num_func(num: int, s_num: int, sequence: list[int]) -> int:
         return num - remove_amount if num > 0 else num
@@ -237,6 +244,64 @@ def get_adjusted_removal_advnaced_func(
         return num - adjusted_remove if num > 0 else num
 
     return adjusted_removal_advnaced_func
+
+
+def get_adjusted_percent_removal_func(
+    minimum_remove: int,
+    remove_percents: dict[int, dict[int, float]],
+    default_remove_percent: float,
+    saved_data: dict[str, float],
+):
+    def adjusted_percent_removal_func(
+        num: int, s_num: int, sequence: list[float]
+    ) -> float:
+        seq_pos = sequence.index(s_num)
+        count_remove_percents = remove_percents.get(
+            max(
+                (key for key in remove_percents.keys() if key >= 0 and key < seq_pos),
+                default=0,
+            ),
+            None,
+        )
+
+        remove_percentage = default_remove_percent
+        if count_remove_percents:
+            remove_percentage = count_remove_percents.get(round(s_num), None)
+            if not remove_percentage:
+                if s_num >= 0:
+                    remove_percentage = count_remove_percents.get(
+                        max(
+                            (
+                                key
+                                for key in count_remove_percents.keys()
+                                if key >= 0 and key < s_num
+                            ),
+                            default=0,
+                        ),
+                        default_remove_percent,
+                    )
+                if s_num < 0:
+                    remove_percentage = count_remove_percents.get(
+                        min(
+                            (
+                                key
+                                for key in count_remove_percents.keys()
+                                if key < 0 and key > s_num
+                            ),
+                            default=0,
+                        ),
+                        default_remove_percent,
+                    )
+
+        adjusted_remove = max(
+            num * ((remove_percentage or default_remove_percent) / 100), minimum_remove
+        )
+        saved_data["total_removed"] = (
+            saved_data.get("total_removed", 0) + adjusted_remove
+        )
+        return num - adjusted_remove if num > 0 else num
+
+    return adjusted_percent_removal_func
 
 
 def get_percent_hit_zero_func():
@@ -361,19 +426,25 @@ def main():
     saved_data = {}
     seqs_data, count_stats, custom_stats = simulate_sequences(
         100000,
-        5.5,
-        30,
+        5.0,
+        15,
         seq_count=10000,
         exclude_percent=2,
         num_modify_funcs=[
+            # get_add_num_func(10000),
             # get_remove_num_func(10000),
-            # get_remove_num_adjusted_func(12500, 0.00, saved_data),
+            # get_remove_num_adjusted_func(12000, 0.35, saved_data),
             # get_adjusted_removal_advnaced_func(12000,
             #                               {0: {-15: 1.0, -10: 1.0, -5: 1.0, -1: 1.0},
             #                                3: {-15: 0.5, -10: 0.5, -5: 0.2, 5: 0.0, 10: 0.0, 15: 0.4},
             #                                10: {-15: 0.3, -10: 0.2, 1: 0.0, 5: 0.0, 10: 0.4, 15: 0.6},
             #                                20: {-15: 0.2, -10: 0.1, 1: 0.2, 5: 0.4, 10: 0.6, 15: 0.8}
             #                               }, 0.0, saved_data)
+            # get_adjusted_percent_removal_func(8000, {
+            #                                0: {-15: 1.0, -10: 1.0, -5: 1.0, -1: 1.0},
+            #                                3: {-15: 3.0, -10: 3.5, -5: 4.0, 5: 5.5, 10: 5.5, 15: 6.0},
+            #                                10: {-15: 4.0, -10: 4.0, -5: 4.5, 5: 8.0, 10: 9.0, 15: 10.0},
+            #                                }, 5.0, saved_data)
         ],
         stat_funcs=[
             get_sequence_averages_func(),
@@ -382,7 +453,7 @@ def main():
     )
 
     print("saved_data", saved_data)
-    print("count_stats", count_stats[30])
+    print("count_stats", count_stats[list(count_stats)[-1]])
     print("custom_stats", custom_stats)
     plot(
         [*seqs_data.values()], show_black=True, colors=["#FFD700", "#10DE94", "#FF6961"]
