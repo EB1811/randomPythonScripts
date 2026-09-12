@@ -1,18 +1,19 @@
 import math
 import random
 import matplotlib.pyplot as plt
+import time
 
-C_return_min = -25
-C_return_max = 25
+C_return_min = -10
+C_return_max = 10
 
 C_rand_avg_bias_chance = 0.5
-C_average_weight = 0.25
-C_momentum_weight = 0.15
+C_average_weight = 0.15
+C_momentum_weight = 0.20
 
 
 def get_apply_rand_avg_bias_w(rand_avg_bias_chance=C_rand_avg_bias_chance):
     def apply_rand_avg_bias_w(
-        target_average, curr_sequence, return_min, return_max
+        target_average, curr_sequence, seq_sum, return_min, return_max
     ) -> tuple[int, int]:
         if random.random() > rand_avg_bias_chance:
             return (return_min, return_max)
@@ -24,13 +25,17 @@ def get_apply_rand_avg_bias_w(rand_avg_bias_chance=C_rand_avg_bias_chance):
 
 def get_apply_average_w(average_weight=C_average_weight):
     def apply_average_w(
-        target_average, curr_sequence, return_min, return_max
+        target_average, curr_sequence, seq_sum, return_min, return_max
     ) -> tuple[int, int]:
-        curr_avg = sum(curr_sequence) / len(curr_sequence)
+        curr_avg = seq_sum / len(curr_sequence)
         curr_avg_diff = (curr_avg - target_average) / target_average
 
-        mod_min = return_min * (1 + curr_avg_diff * average_weight)
-        mod_max = return_max * (1 - curr_avg_diff * average_weight)
+        mod_min = max(
+            return_min * 2, min(return_min * (1 + curr_avg_diff * average_weight), -1)
+        )
+        mod_max = max(
+            1, min(return_max * (1 - curr_avg_diff * average_weight), return_max * 2)
+        )
 
         # print((mod_min, mod_max))
         return (mod_min, mod_max)
@@ -40,7 +45,7 @@ def get_apply_average_w(average_weight=C_average_weight):
 
 def get_apply_momentum_w(momentum_weight=C_momentum_weight):
     def apply_momentum_w(
-        target_average, curr_sequence, return_min, return_max
+        target_average, curr_sequence, seq_sum, return_min, return_max
     ) -> tuple[int, int]:
         if len(curr_sequence) <= 0:
             return (return_min, return_max)
@@ -101,29 +106,26 @@ def get_sequence(
     weight_funcs=C_weight_funcs,
 ) -> list[float]:
     sequence = [round(random.uniform(return_min, return_max), 2)]
+    seq_sum = sum(sequence)
     while len(sequence) < count:
         mod_min = return_min
         mod_max = return_max
         for w_func in weight_funcs:
-            w_min, w_max = w_func(target_average, sequence, mod_min, mod_max)
+            w_min, w_max = w_func(target_average, sequence, seq_sum, mod_min, mod_max)
             mod_min = w_min
             mod_max = w_max
 
-        avg_needed_num = (target_average * (len(sequence) + 1)) - sum(sequence)
-        lerp_weight = 0.0 if len(sequence) / count < 0.5 else 0.15
-        lerp_weight = lerp_weight if len(sequence) / count < 0.75 else 0.25
-        lerp_weight = lerp_weight if len(sequence) / count < 0.90 else 0.35
-        lerped_min = lerp(
-            mod_min, avg_needed_num, (len(sequence) / count) * lerp_weight
-        )
-        lerped_max = lerp(
-            mod_max, avg_needed_num, (len(sequence) / count) * lerp_weight
-        )
+        avg_needed_num = (target_average * len(sequence)) - seq_sum
+        seq_prog = len(sequence) / count
+        lerp_weight = 0.05 if seq_prog < 0.5 else 0.15
+        lerp_weight = lerp_weight if seq_prog < 0.75 else 0.25
+        lerp_weight = lerp_weight if seq_prog < 0.90 else 0.35
+        lerped_min = lerp(mod_min, avg_needed_num, seq_prog * lerp_weight)
+        lerped_max = lerp(mod_max, avg_needed_num, seq_prog * lerp_weight)
 
-        sequence.append(round(random.uniform(lerped_min, lerped_max), 2))
-
-    # curr_avg = sum(sequence) / len(sequence)
-    # print(curr_avg)
+        next_val = round(random.uniform(lerped_min, lerped_max), 2)
+        sequence.append(next_val)
+        seq_sum += next_val
 
     return sequence
 
@@ -139,10 +141,10 @@ def multi_num_roll(
     init_num: int, sequence: list[float], num_modify_funcs=[]
 ) -> list[int]:
     res = []
-    for s_num in sequence:
+    for i, s_num in enumerate(sequence):
         mod_num = res[-1] if len(res) > 0 else init_num
         for m_func in num_modify_funcs:
-            mod_num = m_func(mod_num, s_num, sequence)
+            mod_num = m_func(mod_num, s_num, sequence, i)
 
         s_num_multi = s_num / 100
         res.append(mod_num + (mod_num * s_num_multi))
@@ -150,14 +152,14 @@ def multi_num_roll(
 
 
 def get_add_num_func(add_amount: int):
-    def add_num_func(num: int, s_num: int, sequence: list[int]) -> int:
-        return num + add_amount if num > 0 else num
+    def add_num_func(num: int, s_num: int, sequence: list[int], seq_pos: int) -> int:
+        return num + add_amount
 
     return add_num_func
 
 
 def get_remove_num_func(remove_amount: int):
-    def remove_num_func(num: int, s_num: int, sequence: list[int]) -> int:
+    def remove_num_func(num: int, s_num: int, sequence: list[int], seq_pos: int) -> int:
         return num - remove_amount if num > 0 else num
 
     return remove_num_func
@@ -166,9 +168,10 @@ def get_remove_num_func(remove_amount: int):
 def get_remove_num_adjusted_func(
     remove_amount: int, adjust_multi: float, saved_data: dict[str, float]
 ):
-    def remove_num_adjusted_func(num: int, s_num: int, sequence: list[float]) -> float:
+    def remove_num_adjusted_func(
+        num: int, s_num: int, sequence: list[float], seq_pos: int
+    ) -> float:
         adjusted_remove = remove_amount
-        seq_pos = sequence.index(s_num)
         if s_num < 0:
             adjusted_remove *= 1 - adjust_multi
         elif s_num >= 5 and (seq_pos >= 1 and sequence[seq_pos - 1] > 0):
@@ -189,10 +192,9 @@ def get_adjusted_removal_advnaced_func(
     saved_data: dict[str, float],
 ):
     def adjusted_removal_advnaced_func(
-        num: int, s_num: int, sequence: list[float]
+        num: int, s_num: int, sequence: list[float], seq_pos: int
     ) -> float:
         adjusted_remove = remove_amount
-        seq_pos = sequence.index(s_num)
 
         adjust_multi_num = adjust_default
 
@@ -253,9 +255,8 @@ def get_adjusted_percent_removal_func(
     saved_data: dict[str, float],
 ):
     def adjusted_percent_removal_func(
-        num: int, s_num: int, sequence: list[float]
+        num: int, s_num: int, sequence: list[float], seq_pos: int
     ) -> float:
-        seq_pos = sequence.index(s_num)
         count_remove_percents = remove_percents.get(
             max(
                 (key for key in remove_percents.keys() if key >= 0 and key < seq_pos),
@@ -334,33 +335,6 @@ def get_sequence_averages_func():
     return percent_hit_zero_func
 
 
-sequence = get_sequence(5.5, 30)
-rolled_seq = roll(sequence)
-
-saved_data = {}
-multi_num_roll_seq = multi_num_roll(
-    100000,
-    sequence,
-    [
-        # get_remove_num_func(7500)
-        get_remove_num_adjusted_func(4000, 0.25, saved_data)
-    ],
-)
-# print("final", saved_data)
-
-# print(sequence)
-# print(multi_num_roll_seq)
-
-# plot([sequence])
-# plot([rolled_seq])
-# plot([multi_num_roll_seq], show_black=False)
-
-
-# sequences = [get_sequence(5.5, 30) for i in range(10)]
-# multi_num_roll_seqs = [multi_num_roll(100000, s) for s in sequences]
-# plot(multi_num_roll_seqs, show_black=False)
-
-
 def simulate_sequences(
     init_num: int,
     target_average: float,
@@ -423,16 +397,18 @@ def simulate_sequences(
 
 def main():
     # return
+    start_time = time.perf_counter()
+
     saved_data = {}
     seqs_data, count_stats, custom_stats = simulate_sequences(
         100000,
-        5.0,
-        15,
+        1.5,
+        72,
         seq_count=10000,
         exclude_percent=2,
         num_modify_funcs=[
-            # get_add_num_func(10000),
-            # get_remove_num_func(10000),
+            # get_add_num_func(100),
+            # get_remove_num_func(12000),
             # get_remove_num_adjusted_func(12000, 0.35, saved_data),
             # get_adjusted_removal_advnaced_func(12000,
             #                               {0: {-15: 1.0, -10: 1.0, -5: 1.0, -1: 1.0},
@@ -452,6 +428,9 @@ def main():
         ],
     )
 
+    end_time = time.perf_counter()
+    print(f"Function took {end_time - start_time:.6f} seconds to complete.")
+
     print("saved_data", saved_data)
     print("count_stats", count_stats[list(count_stats)[-1]])
     print("custom_stats", custom_stats)
@@ -461,3 +440,18 @@ def main():
 
 
 main()
+
+# start_time = time.perf_counter()
+# sequence = get_sequence(5.5, 30)
+# rolled_seq = roll(sequence)
+# saved_data = {}
+# multi_num_roll_seq = multi_num_roll(
+#     100000,
+#     sequence,
+#     [
+#         # get_remove_num_func(7500)
+#         get_remove_num_adjusted_func(4000, 0.25, saved_data)
+#     ],
+# )
+# end_time = time.perf_counter()
+# print(f"Function took {end_time - start_time:.6f} seconds to complete.")
