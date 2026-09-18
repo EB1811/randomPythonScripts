@@ -2,6 +2,7 @@ import math
 import random
 import matplotlib.pyplot as plt
 import time
+import multiprocessing
 
 C_return_min = -10
 C_return_max = 10
@@ -141,13 +142,13 @@ def multi_num_roll(
     init_num: int, sequence: list[float], num_modify_funcs=[]
 ) -> list[int]:
     res = []
+    curr_mod_num = init_num
     for i, s_num in enumerate(sequence):
-        mod_num = res[-1] if len(res) > 0 else init_num
         for m_func in num_modify_funcs:
-            mod_num = m_func(mod_num, s_num, sequence, i)
+            curr_mod_num = m_func(curr_mod_num, s_num, sequence, i)
 
-        s_num_multi = s_num / 100
-        res.append(mod_num + (mod_num * s_num_multi))
+        curr_mod_num += curr_mod_num * (s_num / 100)
+        res.append(curr_mod_num)
     return res
 
 
@@ -185,53 +186,105 @@ def get_remove_num_adjusted_func(
     return remove_num_adjusted_func
 
 
+def fill_missing_keys_outwards(data: dict) -> dict:
+    if not data:
+        return {}
+
+    def fill_1d_outwards(inner_data: dict, default_val=0.0) -> dict:
+        """Fills a dictionary by propagating values outward from 0."""
+        if not inner_data:
+            return {}
+
+        keys = sorted(inner_data.keys())
+        # Ensure the range always includes 0 down to the min key and up to the max key
+        min_k = min(0, keys[0])
+        max_k = max(0, keys[-1])
+
+        filled = {}
+
+        # 1. Handle the center point (0)
+        base_val = inner_data.get(0, default_val)
+        filled[0] = base_val
+
+        # 2. Propagate in the positive direction (0 -> max_k)
+        current_val = base_val
+        for k in range(1, max_k + 1):
+            if k in inner_data:
+                current_val = inner_data[k]
+            filled[k] = current_val
+
+        # 3. Propagate in the negative direction (0 -> min_k)
+        current_val = base_val
+        for k in range(-1, min_k - 1, -1):
+            if k in inner_data:
+                current_val = inner_data[k]
+            filled[k] = current_val
+
+        # Return sorted by key for clean readability
+        return {k: filled[k] for k in sorted(filled.keys())}
+
+    # Step 1: Pre-process all inner dictionaries using the outward-from-zero logic
+    pre_filled_inners = {k: fill_1d_outwards(v) for k, v in data.items()}
+
+    # Step 2: Fill the outer dictionary boundaries
+    sorted_outer_keys = sorted(data.keys())
+    filled_outer = {}
+    min_outer, max_outer = min(0, sorted_outer_keys[0]), max(0, sorted_outer_keys[-1])
+
+    base_inner = pre_filled_inners.get(0, {})
+    filled_outer[0] = base_inner
+
+    # Positive outer propagation
+    current_inner = base_inner
+    for k in range(1, max_outer + 1):
+        if k in pre_filled_inners:
+            current_inner = pre_filled_inners[k]
+        filled_outer[k] = current_inner
+
+    # Negative outer propagation (if any negative outer keys exist in the future)
+    current_inner = base_inner
+    for k in range(-1, min_outer - 1, -1):
+        if k in pre_filled_inners:
+            current_inner = pre_filled_inners[k]
+        filled_outer[k] = current_inner
+
+    return {k: filled_outer[k] for k in sorted(filled_outer.keys())}
+
+
 def get_adjusted_removal_advnaced_func(
     remove_amount: int,
     adjust_multi: dict[int, dict[int, float]],
     adjust_default: float,
     saved_data: dict[str, float],
 ):
+    adjust_multi = fill_missing_keys_outwards(adjust_multi)
+
     def adjusted_removal_advnaced_func(
         num: int, s_num: int, sequence: list[float], seq_pos: int
     ) -> float:
         adjusted_remove = remove_amount
-
         adjust_multi_num = adjust_default
 
         count_adjust_multi = adjust_multi.get(
-            max(
-                (key for key in adjust_multi.keys() if key >= 0 and key < seq_pos),
-                default=0,
-            ),
-            None,
+            seq_pos,
+            adjust_multi.get(next(reversed(adjust_multi)), {0: adjust_default}),
         )
-        if count_adjust_multi:
-            adjust_multi_num = count_adjust_multi.get(round(s_num), None)
-            if not adjust_multi_num:
-                if s_num >= 0:
-                    adjust_multi_num = count_adjust_multi.get(
-                        max(
-                            (
-                                key
-                                for key in count_adjust_multi.keys()
-                                if key >= 0 and key < s_num
-                            ),
-                            default=0,
-                        ),
-                        adjust_default,
-                    )
-                if s_num < 0:
-                    adjust_multi_num = count_adjust_multi.get(
-                        min(
-                            (
-                                key
-                                for key in count_adjust_multi.keys()
-                                if key < 0 and key > s_num
-                            ),
-                            default=0,
-                        ),
-                        adjust_default,
-                    )
+        adjust_multi_num = count_adjust_multi.get(round(s_num), None)
+        if adjust_multi_num is None:
+            if s_num >= 0:
+                next_biggest_key = next(reversed(count_adjust_multi))
+                adjust_multi_num = (
+                    count_adjust_multi.get(next_biggest_key)
+                    if next_biggest_key >= 0
+                    else adjust_default
+                )
+            if s_num < 0:
+                next_smallest_key = next(iter(count_adjust_multi))
+                adjust_multi_num = (
+                    count_adjust_multi.get(next_smallest_key)
+                    if next_smallest_key < 0
+                    else adjust_default
+                )
 
         if s_num < 0:
             adjusted_remove *= 1 - (adjust_multi_num or adjust_default)
@@ -266,9 +319,9 @@ def get_adjusted_percent_removal_func(
         )
 
         remove_percentage = default_remove_percent
-        if count_remove_percents:
+        if count_remove_percents is not None:
             remove_percentage = count_remove_percents.get(round(s_num), None)
-            if not remove_percentage:
+            if remove_percentage is None:
                 if s_num >= 0:
                     remove_percentage = count_remove_percents.get(
                         max(
@@ -343,10 +396,24 @@ def simulate_sequences(
     exclude_percent=1,
     num_modify_funcs=[],
     stat_funcs=[],
+    use_parallel=True,
 ) -> tuple[
-    dict[str, list[float] | list[int]], dict[int, dict[str, float]], dict[str, float]
+    list[list[int]],
+    dict[str, list[float] | list[int]],
+    dict[int, dict[str, float]],
+    dict[str, float],
 ]:
-    sequences = [get_sequence(target_average, count) for i in range(seq_count)]
+    sequences = []
+
+    if use_parallel and seq_count >= 25000:
+        args_gen = ((target_average, count) for _ in range(seq_count))
+        with multiprocessing.Pool() as pool:
+            calculated_chunksize = max(1, seq_count // (pool._processes * 4))
+            sequences = pool.starmap(
+                get_sequence, args_gen, chunksize=calculated_chunksize
+            )
+    else:
+        sequences = [get_sequence(target_average, count) for i in range(seq_count)]
 
     sequences.sort(key=lambda seq: sum(seq) / len(seq))
     exclude_num = round(len(sequences) * (exclude_percent / 100))
@@ -385,6 +452,7 @@ def simulate_sequences(
     )
 
     return (
+        multi_num_roll_seqs,
         {
             "avg_of_seqs": avg_of_seqs,
             "largest_final_seq": largest_final_seq,
@@ -395,37 +463,40 @@ def simulate_sequences(
     )
 
 
-def main():
+def main() -> list[list[int]]:
     # return
     start_time = time.perf_counter()
 
     saved_data = {}
-    seqs_data, count_stats, custom_stats = simulate_sequences(
-        100000,
-        1.5,
-        72,
-        seq_count=10000,
+    roll_seqs, seqs_data, count_stats, custom_stats = simulate_sequences(
+        200000,
+        1.40,
+        120,
+        seq_count=50000,
         exclude_percent=2,
         num_modify_funcs=[
             # get_add_num_func(100),
             # get_remove_num_func(12000),
             # get_remove_num_adjusted_func(12000, 0.35, saved_data),
-            # get_adjusted_removal_advnaced_func(12000,
-            #                               {0: {-15: 1.0, -10: 1.0, -5: 1.0, -1: 1.0},
-            #                                3: {-15: 0.5, -10: 0.5, -5: 0.2, 5: 0.0, 10: 0.0, 15: 0.4},
-            #                                10: {-15: 0.3, -10: 0.2, 1: 0.0, 5: 0.0, 10: 0.4, 15: 0.6},
-            #                                20: {-15: 0.2, -10: 0.1, 1: 0.2, 5: 0.4, 10: 0.6, 15: 0.8}
-            #                               }, 0.0, saved_data)
+            get_adjusted_removal_advnaced_func(
+                3000,
+                {
+                    0: {-15: 1.0, -10: 1.0, -5: 1.0, -1: 1.0},
+                    12: {-15: 0.5, -10: 0.5, -5: 0.2, 5: 0.0, 10: 0.0, 15: 0.4},
+                    40: {-15: 0.3, -10: 0.2, 1: 0.0, 5: 0.0, 10: 0.4, 15: 0.6},
+                    80: {-15: 0.2, -10: 0.1, 1: 0.2, 5: 0.4, 10: 0.6, 15: 0.8},
+                },
+                0.0,
+                saved_data,
+            )
             # get_adjusted_percent_removal_func(8000, {
             #                                0: {-15: 1.0, -10: 1.0, -5: 1.0, -1: 1.0},
             #                                3: {-15: 3.0, -10: 3.5, -5: 4.0, 5: 5.5, 10: 5.5, 15: 6.0},
             #                                10: {-15: 4.0, -10: 4.0, -5: 4.5, 5: 8.0, 10: 9.0, 15: 10.0},
             #                                }, 5.0, saved_data)
         ],
-        stat_funcs=[
-            get_sequence_averages_func(),
-            # get_percent_hit_zero_func()
-        ],
+        stat_funcs=[get_sequence_averages_func(), get_percent_hit_zero_func()],
+        use_parallel=True,
     )
 
     end_time = time.perf_counter()
@@ -438,8 +509,11 @@ def main():
         [*seqs_data.values()], show_black=True, colors=["#FFD700", "#10DE94", "#FF6961"]
     )
 
+    return roll_seqs
 
-main()
+
+if __name__ == "__main__":
+    roll_seqs = main()
 
 # start_time = time.perf_counter()
 # sequence = get_sequence(5.5, 30)
