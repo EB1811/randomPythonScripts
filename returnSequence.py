@@ -4,12 +4,21 @@ import matplotlib.pyplot as plt
 import time
 import multiprocessing
 
-C_return_min = -10
-C_return_max = 10
+C_return_min_y = -20
+C_return_max_y = 20
+C_return_min_q = -14
+C_return_max_q = 14
+C_return_min_m = -8
+C_return_max_m = 8
 
-C_rand_avg_bias_chance = 0.5
+C_return_min = C_return_min_q
+C_return_max = C_return_max_q
+
+C_rand_avg_bias_chance = 0.6
 C_average_weight = 0.15
 C_momentum_weight = 0.20
+
+C_avg_lerp_weights = [(0.05, 0.0), (0.10, 0.5), (0.15, 0.75), (0.20, 0.90), (0.25, 1.0)]
 
 
 def get_apply_rand_avg_bias_w(rand_avg_bias_chance=C_rand_avg_bias_chance):
@@ -104,6 +113,7 @@ def get_sequence(
     count,
     return_min=C_return_min,
     return_max=C_return_max,
+    lerp_weights=C_avg_lerp_weights,
     weight_funcs=C_weight_funcs,
 ) -> list[float]:
     sequence = [round(random.uniform(return_min, return_max), 2)]
@@ -118,9 +128,11 @@ def get_sequence(
 
         avg_needed_num = (target_average * len(sequence)) - seq_sum
         seq_prog = len(sequence) / count
-        lerp_weight = 0.05 if seq_prog < 0.5 else 0.15
-        lerp_weight = lerp_weight if seq_prog < 0.75 else 0.25
-        lerp_weight = lerp_weight if seq_prog < 0.90 else 0.35
+
+        lerp_weight = 0
+        for lw, threshold in lerp_weights:
+            if seq_prog >= threshold:
+                lerp_weight = lw
         lerped_min = lerp(mod_min, avg_needed_num, seq_prog * lerp_weight)
         lerped_max = lerp(mod_max, avg_needed_num, seq_prog * lerp_weight)
 
@@ -253,6 +265,7 @@ def fill_missing_keys_outwards(data: dict) -> dict:
 
 def get_adjusted_removal_advnaced_func(
     remove_amount: int,
+    remove_multi: int,
     adjust_multi: dict[int, dict[int, float]],
     adjust_default: float,
     saved_data: dict[str, float],
@@ -262,6 +275,11 @@ def get_adjusted_removal_advnaced_func(
     def adjusted_removal_advnaced_func(
         num: int, s_num: int, sequence: list[float], seq_pos: int
     ) -> float:
+        # if num <= 0:
+        #    return num
+        if seq_pos % remove_multi != 0:
+            return num
+
         adjusted_remove = remove_amount
         adjust_multi_num = adjust_default
 
@@ -296,7 +314,7 @@ def get_adjusted_removal_advnaced_func(
         saved_data["total_removed"] = (
             saved_data.get("total_removed", 0) + adjusted_remove
         )
-        return num - adjusted_remove if num > 0 else num
+        return num - adjusted_remove
 
     return adjusted_removal_advnaced_func
 
@@ -463,32 +481,36 @@ def simulate_sequences(
     )
 
 
+C_return_avg_y = 5.5
+C_return_avg_q = 1.4
+C_return_avg_m = 0.5
+
+
 def main() -> list[list[int]]:
-    # return
     start_time = time.perf_counter()
 
     saved_data = {}
     roll_seqs, seqs_data, count_stats, custom_stats = simulate_sequences(
-        200000,
-        1.40,
-        120,
+        100000,
+        C_return_avg_q,
+        60,
         seq_count=50000,
         exclude_percent=2,
         num_modify_funcs=[
-            # get_add_num_func(100),
+            # get_add_num_func(1666),
             # get_remove_num_func(12000),
             # get_remove_num_adjusted_func(12000, 0.35, saved_data),
-            get_adjusted_removal_advnaced_func(
-                3000,
-                {
-                    0: {-15: 1.0, -10: 1.0, -5: 1.0, -1: 1.0},
-                    12: {-15: 0.5, -10: 0.5, -5: 0.2, 5: 0.0, 10: 0.0, 15: 0.4},
-                    40: {-15: 0.3, -10: 0.2, 1: 0.0, 5: 0.0, 10: 0.4, 15: 0.6},
-                    80: {-15: 0.2, -10: 0.1, 1: 0.2, 5: 0.4, 10: 0.6, 15: 0.8},
-                },
-                0.0,
-                saved_data,
-            )
+            # get_adjusted_removal_advnaced_func(
+            #    3000, 1,
+            #    {
+            #        0: {-15: 1.0, -10: 1.0, -5: 1.0, -1: 1.0},
+            #        12: {-15: 0.5, -10: 0.5, -5: 0.2, 5: 0.0, 10: 0.0, 15: 0.4},
+            #        40: {-15: 0.3, -10: 0.2, 1: 0.0, 5: 0.0, 10: 0.4, 15: 0.6},
+            #        80: {-15: 0.2, -10: 0.1, 1: 0.2, 5: 0.4, 10: 0.6, 15: 0.8},
+            #    },
+            #    0.0,
+            #    saved_data,
+            # )
             # get_adjusted_percent_removal_func(8000, {
             #                                0: {-15: 1.0, -10: 1.0, -5: 1.0, -1: 1.0},
             #                                3: {-15: 3.0, -10: 3.5, -5: 4.0, 5: 5.5, 10: 5.5, 15: 6.0},
@@ -514,18 +536,3 @@ def main() -> list[list[int]]:
 
 if __name__ == "__main__":
     roll_seqs = main()
-
-# start_time = time.perf_counter()
-# sequence = get_sequence(5.5, 30)
-# rolled_seq = roll(sequence)
-# saved_data = {}
-# multi_num_roll_seq = multi_num_roll(
-#     100000,
-#     sequence,
-#     [
-#         # get_remove_num_func(7500)
-#         get_remove_num_adjusted_func(4000, 0.25, saved_data)
-#     ],
-# )
-# end_time = time.perf_counter()
-# print(f"Function took {end_time - start_time:.6f} seconds to complete.")
